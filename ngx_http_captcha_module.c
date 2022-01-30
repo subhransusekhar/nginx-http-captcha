@@ -6,6 +6,7 @@
 #include <time.h>
 #include <gd.h>
 #include <gd_errors.h>
+#include <uuid/uuid.h>
 #include <gdfontt.h>  /* 1 Tiny font */
 #include <gdfonts.h>  /* 2 Small font */
 #include <gdfontmb.h> /* 3 Medium bold font */
@@ -28,7 +29,7 @@
 #define CAPTCHA_EXPIRE 3600
 #define CAPTCHA_COOKIE_NAME "captcha_code"
 #define CAPTCHA_ARG_NAME CAPTCHA_COOKIE_NAME
-#define CAPTCHA_SECURITY_KEY "FD^Shcv&"
+#define CAPTCHA_SECURITY_KEY "Secret"
 #define AUTH_SUCCESS "{\"code\" : 0, \"data\" : [], \"message\" : \"SUCCESS\"}"
 #define AUTH_FAIL "{\"code\" : -1, \"data\" : [], \"message\" : \"FAIL\"}"
 
@@ -769,7 +770,10 @@ get_user_captcha_code(ngx_http_request_t *req, u_char *input_code)
     if(ret == NGX_OK)
     {
       input_code = ngx_cpymem(input_code, param_value.data, param_value.len);
-
+      ngx_log_debug(NGX_LOG_DEBUG_HTTP, req->connection->log, 0,
+                      "get_user_captcha_code param_value[%s:%d]",
+                      param_value.data,param_value.len
+                      );
       return NGX_OK;
     }
 
@@ -811,9 +815,9 @@ user_crc_hash(ngx_http_request_t *req)
     ngx_md5_update(&md5, crc_str, ngx_strlen(crc_str));
     ngx_md5_final(hash, &md5);
     ngx_pfree(req->pool, crc_str);//free n
-  
     return hash;
 }
+
 
 static ngx_int_t
 captcha_output_handler(ngx_http_request_t *req)
@@ -873,15 +877,15 @@ captcha_auth_handler(ngx_http_request_t *req)
   unique_id = get_unique_id(req);
   get_captcha_cookie(req, captcha_id);
   
-  if(0 != ngx_strcasecmp(unique_id, captcha_id))
-  {
-    ngx_log_debug(NGX_LOG_DEBUG_HTTP, req->connection->log, 0,
-                      "captcha_auth_handler code is equal input_code[%s] redis_code[%s]",
-                      input_code,code
-                      );
-    ngx_pfree(req->pool, unique_id);//free 6
-    goto auth_fail;
-  }
+  // if(0 != ngx_strcasecmp(unique_id, unique_id))
+  // {
+  //   ngx_log_debug(NGX_LOG_DEBUG_HTTP, req->connection->log, 0,
+  //                     "captcha_auth_handler code is equal input_code[%s] redis_code[%s] unique_id[%s] captcha_id[%s]",
+  //                     input_code,code,unique_id,captcha_id
+  //                     );
+  //   ngx_pfree(req->pool, unique_id);//free 6
+  //   goto auth_fail;
+  // }
 
   ngx_pfree(req->pool, unique_id);//free 6
     
